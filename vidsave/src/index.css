@@ -1,0 +1,17 @@
+@import "tailwindcss"; /* This replaces the 3 @tailwind lines in v4 */
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  background: #071016;
+  color: white;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}

@@ -1,16 +1,19 @@
 import axios from "axios";
 
+// Empty base URL keeps requests same-origin, which the Vite dev proxy handles
+// locally. Set VITE_API_URL when the API is deployed separately from the site.
+const apiBaseUrl = import.meta.env.VITE_API_URL || "";
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000",
+  baseURL: apiBaseUrl,
   timeout: 45000
 });
-
-const apiBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export async function getVideoInfo(url) {
   const response = await api.get("/api/info", {
     params: { url }
   });
+
   return response.data;
 }
 

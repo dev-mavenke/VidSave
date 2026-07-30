@@ -1,73 +1,9 @@
 const youtubedl = require('yt-dlp-exec');
-const { getVideoInfo, isSupportedUrl } = require('../services/ytdlService');
+const { getVideoInfo } = require('../services/ytdlService');
+const { AppError, mapYtDlpError } = require('../utils/errors');
+const { getMimeType } = require('../utils/format');
 
-const getHeightFromText = (value) => {
-  const match = String(value || '').match(/(?:^|x)(\d{3,4})(?:p)?$/i);
-  return match ? Number(match[1]) : null;
-};
-
-const getQualityLabel = (format) => {
-  if (format.height) {
-    return `${format.height}p`;
-  }
-
-  const height =
-    getHeightFromText(format.resolution) ||
-    getHeightFromText(format.format_note) ||
-    getHeightFromText(format.quality);
-
-  if (height) {
-    return `${height}p`;
-  }
-
-  if (format.quality && format.quality !== 'p') {
-    return format.quality;
-  }
-
-  if (format.format_note && format.format_note !== 'unknown') {
-    return format.format_note;
-  }
-
-  return 'Standard Quality';
-};
-
-exports.getMetadata = async (req, res) => {
-  try {
-    const { url } = req.query;
-
-    if (!url) {
-      return res.status(400).json({
-        error: 'URL is required'
-      });
-    }
-
-    const info = await getVideoInfo(url);
-
-    const formats = (info.formats || []).map((f) => ({
-      format_id: f.format_id,
-      ext: f.ext || 'mp4',
-      height:
-        f.height ||
-        getHeightFromText(f.resolution) ||
-        getHeightFromText(f.quality) ||
-        null,
-      quality: getQualityLabel(f)
-    }));
-
-    res.json({
-      title: info.title || 'VidSave Media',
-      thumbnail: info.thumbnail || '',
-      formats
-    });
-
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      error: error.message
-    });
-  }
-};
+const STDERR_BUFFER_LIMIT = 4096;
 
 const sanitizeFilename = (value) =>
   String(value || 'vidsave-video')
@@ -76,30 +12,45 @@ const sanitizeFilename = (value) =>
     .trim()
     .slice(0, 120) || 'vidsave-video';
 
+exports.getMetadata = async (req, res) => {
+  const { url } = req.query;
+
+  if (!url) {
+    throw new AppError('URL is required', 400);
+  }
+
+  // getVideoInfo already returns normalized, deduped formats - pass them straight
+  // through rather than re-deriving the labels a second time.
+  res.json(await getVideoInfo(url));
+};
+
 exports.downloadVideo = async (req, res) => {
   const { url, formatId, title } = req.query;
 
   if (!url) {
-    return res.status(400).json({
-      error: 'URL is required'
-    });
+    throw new AppError('URL is required', 400);
   }
 
-  if (!isSupportedUrl(url)) {
-    return res.status(400).json({
-      error: 'Unsupported link. Paste a public TikTok, Instagram, Twitter/X, or YouTube video URL.'
-    });
+  // Doubles as the URL allowlist check and as the source of truth for which
+  // format ids are acceptable, so `formatId` can never be an arbitrary yt-dlp
+  // format expression.
+  const info = await getVideoInfo(url);
+
+  const chosen = formatId
+    ? info.formats.find((f) => f.format_id === formatId)
+    : null;
+
+  if (formatId && !chosen) {
+    throw new AppError('That format is no longer available for this video.', 400);
   }
 
-  const filename = `${sanitizeFilename(title)}.mp4`;
-
-  res.setHeader('Content-Type', 'video/mp4');
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  const ext = chosen?.ext || 'mp4';
+  const filename = `${sanitizeFilename(title || info.title)}.${ext}`;
 
   const subprocess = youtubedl.exec(
     url,
     {
-      format: formatId || 'best[ext=mp4]/best',
+      format: chosen ? chosen.format_id : 'best[ext=mp4]/best',
       output: '-',
       noWarnings: true,
       noPlaylist: true,
@@ -110,35 +61,52 @@ exports.downloadVideo = async (req, res) => {
     }
   );
 
+  let streaming = false;
+  let aborted = false;
+  let stderr = '';
+
+  subprocess.stderr?.on('data', (chunk) => {
+    stderr = (stderr + chunk.toString()).slice(-STDERR_BUFFER_LIMIT);
+  });
+
+  // Headers are deferred until yt-dlp actually produces bytes. Setting them up
+  // front would lock the response to video/mp4 and make any later error render
+  // as a corrupt download instead of a readable JSON error.
+  subprocess.stdout.once('data', () => {
+    streaming = true;
+    res.setHeader('Content-Type', getMimeType(ext));
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  });
+
   subprocess.stdout.pipe(res);
-
-  subprocess.stderr.on('data', (chunk) => {
-    console.error(chunk.toString());
-  });
-
-  subprocess.on('error', (error) => {
-    console.error(error);
-
-    if (!res.headersSent) {
-      res.status(500).json({
-        error: 'Failed to start the download.'
-      });
-    } else {
-      res.destroy(error);
-    }
-  });
-
-  subprocess.on('close', (code) => {
-    if (code !== 0 && !res.headersSent) {
-      res.status(500).json({
-        error: 'Failed to download this public video.'
-      });
-    }
-  });
 
   res.on('close', () => {
     if (!res.writableEnded && !subprocess.killed) {
+      aborted = true;
       subprocess.kill();
     }
   });
+
+  // yt-dlp-exec returns an execa promise. Leaving it unhandled means a failed
+  // download - or our own kill() above - becomes an unhandled rejection, which
+  // terminates the process on Node 15+.
+  try {
+    await subprocess;
+
+  } catch (error) {
+    if (aborted || error.isCanceled || error.isTerminated) {
+      return; // Client hung up; nothing to report.
+    }
+
+    console.error('[yt-dlp] download failed:', stderr || error.message);
+
+    if (streaming || res.headersSent) {
+      // Bytes are already on the wire, so the only honest signal left is to
+      // break the connection and let the client see a truncated transfer.
+      res.destroy();
+      return;
+    }
+
+    throw mapYtDlpError(stderr || error.message);
+  }
 };

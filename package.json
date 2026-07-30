@@ -1,12 +1,17 @@
 {
   "name": "vidsave",
   "version": "1.0.0",
-  "main": "index.js",
+  "private": true,
+  "description": "Save public videos from YouTube, TikTok, Instagram, and X.",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "install:all": "npm --prefix server install && npm --prefix vidsave install",
+    "dev:server": "npm --prefix server run dev",
+    "dev:web": "npm --prefix vidsave run dev",
+    "build:web": "npm --prefix vidsave run build",
+    "lint:web": "npm --prefix vidsave run lint",
+    "start": "npm --prefix server start"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
-  "description": ""
+  "license": "ISC"
 }

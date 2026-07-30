@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { AlertCircle } from "lucide-react";
+import { AnimatePresence } from "framer-motion";
 import Hero from "../components/Hero";
 import UrlForm from "../components/UrlForm";
-import LoadingSpinner from "../components/LoadingSpinner";
+import SkeletonCard from "../components/SkeletonCard";
 import VideoPreviewCard from "../components/VideoPreviewCard";
 import FAQ from "../components/FAQ";
+import { useToast } from "../hooks/useToast";
 import { getVideoInfo } from "../services/api";
 
 function normalizeUrl(value) {
@@ -33,13 +34,12 @@ function getErrorMessage(err) {
 export default function Home() {
   const [loading, setLoading] = useState(false);
   const [video, setVideo] = useState(null);
-  const [error, setError] = useState("");
+  const { toast } = useToast();
 
   async function handleFetch(url) {
     const normalizedUrl = normalizeUrl(url);
 
     setLoading(true);
-    setError("");
     setVideo(null);
 
     try {
@@ -48,12 +48,17 @@ export default function Home() {
       setVideo({
         title: data.title || "Untitled media",
         thumbnail: data.thumbnail || "",
+        duration: data.duration || null,
         formats: Array.isArray(data.formats) ? data.formats : [],
         originalUrl: normalizedUrl
       });
 
     } catch (err) {
-      setError(getErrorMessage(err));
+      toast({
+        variant: "error",
+        title: "Couldn't fetch that link",
+        description: getErrorMessage(err)
+      });
 
     } finally {
       setLoading(false);
@@ -61,22 +66,31 @@ export default function Home() {
   }
 
   return (
-    <main className="relative overflow-hidden">
+    <main className="relative">
       <Hero />
 
       <section className="mx-auto max-w-5xl px-5">
         <UrlForm onSubmit={handleFetch} loading={loading} />
 
-        {loading && <LoadingSpinner />}
-
-        {error && (
-          <div className="mx-auto mt-6 flex max-w-3xl items-start gap-3 rounded-2xl border border-red-400/25 bg-red-500/10 p-4 text-sm text-red-100 shadow-lg shadow-red-950/10">
-            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-300" />
-            <p>{error}</p>
-          </div>
-        )}
-
-        <VideoPreviewCard video={video} />
+        <AnimatePresence mode="wait">
+          {loading ? (
+            <SkeletonCard key="skeleton" />
+          ) : (
+            video && (
+              <VideoPreviewCard
+                key="card"
+                video={video}
+                onDownload={(format) =>
+                  toast({
+                    variant: "success",
+                    title: "Download started",
+                    description: `${format.quality} · ${format.ext?.toUpperCase() || "media"}`
+                  })
+                }
+              />
+            )
+          )}
+        </AnimatePresence>
       </section>
 
       <FAQ />

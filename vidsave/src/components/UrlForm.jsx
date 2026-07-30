@@ -59,52 +59,54 @@ export default function UrlForm({ onSubmit, loading }) {
   return (
     <div className="mx-auto mt-12 max-w-2xl">
       <form onSubmit={handleSubmit}>
-        <div className="glass group relative flex flex-col gap-2 rounded-2xl p-2 shadow-2xl shadow-black/40 transition focus-within:border-ink/25 sm:flex-row sm:items-center sm:rounded-full sm:p-2">
-          <div className="relative flex-1">
-            <label htmlFor="video-url" className="sr-only">
-              Public video URL
-            </label>
+        {/* One flex row at every width: with the controls reduced to bare icons
+            there is nothing left to anchor to the edges, so they flow inline. */}
+        <div className="glass flex items-center gap-1 rounded-full p-2 shadow-2xl shadow-black/40 transition focus-within:border-ink/25">
+          <label htmlFor="video-url" className="sr-only">
+            Public video URL
+          </label>
 
-            <Link2 className="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-faint" />
+          <Link2 className="pointer-events-none ml-3 h-5 w-5 shrink-0 text-faint" />
 
-            <input
-              id="video-url"
-              value={url}
-              onChange={(e) => {
-                setUrl(e.target.value);
-                if (error) setError("");
-              }}
-              placeholder="Paste a public video link…"
-              inputMode="url"
-              autoComplete="url"
-              spellCheck="false"
-              disabled={loading}
-              className="h-12 w-full rounded-xl bg-transparent pl-11 pr-3 text-sm text-ink outline-none placeholder:text-faint disabled:opacity-60 sm:h-12 sm:rounded-full"
-            />
+          <input
+            id="video-url"
+            value={url}
+            onChange={(e) => {
+              setUrl(e.target.value);
+              if (error) setError("");
+            }}
+            placeholder="Paste a public video link…"
+            inputMode="url"
+            autoComplete="url"
+            spellCheck="false"
+            disabled={loading}
+            className="h-12 min-w-0 flex-1 bg-transparent px-3 text-base text-ink outline-none placeholder:text-faint disabled:opacity-60"
+          />
 
-            {canPaste && !url && (
-              <button
-                type="button"
-                onClick={handlePaste}
-                className="absolute right-2 top-1/2 hidden -translate-y-1/2 items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-xs text-muted transition hover:border-ink/25 hover:text-ink sm:inline-flex"
-              >
-                <ClipboardPaste className="h-3.5 w-3.5" />
-                Paste
-              </button>
-            )}
-          </div>
+          {canPaste && !url && (
+            <button
+              type="button"
+              onClick={handlePaste}
+              aria-label="Paste from clipboard"
+              title="Paste from clipboard"
+              className="shrink-0 rounded-full p-2 text-faint transition hover:text-ink"
+            >
+              <ClipboardPaste className="h-5 w-5" />
+            </button>
+          )}
 
           <button
             type="submit"
             disabled={loading}
-            className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-ink px-6 text-sm font-semibold text-canvas transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 sm:rounded-full"
+            aria-label={loading ? "Checking link" : "Fetch video"}
+            title="Fetch video"
+            className="mr-1 shrink-0 rounded-full p-2 text-ink transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-6 w-6 animate-spin" />
             ) : (
-              <Search className="h-4 w-4" />
+              <Search className="h-6 w-6" />
             )}
-            {loading ? "Checking" : "Fetch"}
           </button>
         </div>
       </form>

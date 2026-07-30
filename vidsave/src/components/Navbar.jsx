@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { Download, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
+import Logo from "./Logo";
 
 const LINKS = [
   { to: "/about", label: "About" },
@@ -50,11 +51,12 @@ export default function Navbar() {
       }`}
     >
       <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-4">
-        <Link to="/" className="group flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-ink text-canvas transition group-hover:bg-white">
-            <Download size={17} strokeWidth={2.5} />
-          </span>
-          <span className="font-display text-lg font-bold tracking-tight">VidSave</span>
+        <Link
+          to="/"
+          aria-label="VidSave home"
+          className="flex items-center transition hover:opacity-80"
+        >
+          <Logo size={30} className="text-lg" />
         </Link>
 
         <div className="hidden items-center gap-1 md:flex">

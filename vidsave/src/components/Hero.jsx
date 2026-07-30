@@ -1,10 +1,9 @@
 import { motion } from "framer-motion";
-import { BadgeCheck, LockKeyhole, Zap } from "lucide-react";
 
 const highlights = [
-  { icon: Zap, label: "Fast metadata check" },
-  { icon: LockKeyhole, label: "No account access" },
-  { icon: BadgeCheck, label: "Public links only" }
+  "Fast metadata check",
+  "No account access",
+  "Public links only"
 ];
 
 const container = {
@@ -23,16 +22,8 @@ export default function Hero() {
       variants={container}
       initial="hidden"
       animate="show"
-      className="mx-auto max-w-4xl px-5 pt-20 text-center md:pt-28"
+      className="mx-auto max-w-4xl px-5 pt-24 text-center md:pt-32"
     >
-      <motion.p
-        variants={item}
-        className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-line bg-surface/60 px-4 py-1.5 text-xs font-medium text-muted"
-      >
-        <span className="h-1.5 w-1.5 rounded-full bg-muted" />
-        Works with YouTube, TikTok, Instagram &amp; X
-      </motion.p>
-
       <motion.h1
         variants={item}
         className="font-display text-4xl font-extrabold leading-[1.05] tracking-tight text-balance sm:text-5xl md:text-6xl lg:text-7xl"
@@ -51,16 +42,17 @@ export default function Hero() {
 
       <motion.div
         variants={item}
-        className="mt-8 flex flex-wrap items-center justify-center gap-2.5 text-sm"
+        className="mt-8 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-sm text-faint"
       >
-        {highlights.map(({ icon: Icon, label }) => (
-          <div
-            key={label}
-            className="glass inline-flex items-center gap-2 rounded-full px-4 py-2 text-muted"
-          >
-            <Icon className="h-4 w-4 text-faint" />
-            <span>{label}</span>
-          </div>
+        {highlights.map((label, index) => (
+          <span key={label} className="inline-flex items-center gap-3">
+            {index > 0 && (
+              <span aria-hidden="true" className="text-muted/40">
+                ·
+              </span>
+            )}
+            {label}
+          </span>
         ))}
       </motion.div>
     </motion.section>

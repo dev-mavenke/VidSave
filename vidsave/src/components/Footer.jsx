@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Download } from "lucide-react";
+import Logo from "./Logo";
 
 const LINKS = [
   { to: "/about", label: "About" },
@@ -12,12 +12,7 @@ export default function Footer() {
     <footer className="border-t border-line">
       <div className="mx-auto flex max-w-6xl flex-col gap-8 px-5 py-12 md:flex-row md:items-start md:justify-between">
         <div className="max-w-sm">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-ink text-canvas">
-              <Download size={15} strokeWidth={2.5} />
-            </span>
-            <span className="font-display font-bold tracking-tight">VidSave</span>
-          </div>
+          <Logo size={26} />
 
           <p className="mt-4 text-sm leading-relaxed text-muted">
             A simple way to save public videos from the platforms you already use.
